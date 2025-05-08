@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
@@ -14,11 +15,16 @@ const AdminDashboard = () => {
   const token = localStorage.getItem('token');
 
   const fetchData = async () => {
-    const usersRes = await axios.get('/api/admin/users', { headers: { Authorization: `Bearer ${token}` } });
-    const ordersRes = await axios.get('/api/admin/orders', { headers: { Authorization: `Bearer ${token}` } });
-    const productsRes = await axios.get('/api/admin/products', {
+    const usersRes = await axios.get(`${API_BASE_URL}/api/admin/users`, {
       headers: { Authorization: `Bearer ${token}` }
     });
+    const ordersRes = await axios.get(`${API_BASE_URL}/api/admin/orders`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const productsRes = await axios.get(`${API_BASE_URL}/api/admin/products`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
     setUsers(usersRes.data);
     setOrders(ordersRes.data);
     setProducts(productsRes.data);
@@ -34,7 +40,7 @@ const AdminDashboard = () => {
   };
 
   const saveChanges = async () => {
-    await axios.put(`/api/admin/product/${editData._id}`, editData, {
+    await axios.put(`${API_BASE_URL}/api/admin/product/${editData._id}`, editData, {
       headers: { Authorization: `Bearer ${token}` }
     });
     setEditModalOpen(false);
@@ -43,7 +49,7 @@ const AdminDashboard = () => {
 
   const viewVendorProducts = async (vendorId) => {
     try {
-      const res = await axios.get(`/api/admin/vendor/${vendorId}/products`, {
+      const res = await axios.get(`${API_BASE_URL}/api/admin/vendor/${vendorId}/products`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setVendorProducts(res.data);
@@ -56,18 +62,22 @@ const AdminDashboard = () => {
 
   const deleteUser = async (id) => {
     if (!window.confirm('Delete this user?')) return;
-    await axios.delete(`/api/admin/user/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+    await axios.delete(`${API_BASE_URL}/api/admin/user/${id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
     fetchData();
   };
 
   const deleteProduct = async (id) => {
     if (!window.confirm('Delete this product?')) return;
-    await axios.delete(`/api/admin/product/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+    await axios.delete(`${API_BASE_URL}/api/admin/product/${id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
     fetchData();
   };
 
   const updateOrderStatus = async (id, newStatus) => {
-    await axios.put(`/api/admin/order/${id}/status`, { status: newStatus }, {
+    await axios.put(`${API_BASE_URL}/api/admin/order/${id}/status`, { status: newStatus }, {
       headers: { Authorization: `Bearer ${token}` }
     });
     fetchData();
