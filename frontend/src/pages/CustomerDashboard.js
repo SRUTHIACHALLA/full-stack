@@ -1,58 +1,149 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
 
-const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const navigate = useNavigate();
+const CustomerDashboard = () => {
+  const [products, setProducts] = useState([]);
+  const [recommendations, setRecommendations] = useState([]);
+  const [cart, setCart] = useState(() => JSON.parse(localStorage.getItem('cart')) || []);
 
-  const loginHandler = async () => {
-    try {
-      const { data } = await axios.post(`${API_BASE_URL}/api/auth/login`, { email, password });
-      console.log("✅ Logged in user:", data);
+  const userId = JSON.parse(localStorage.getItem('user') || '{}')._id;
 
-      if (!data.user || !data.token || !data.user.role) {
-        alert('Login failed: Invalid server response');
-        return;
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/api/customer/products`);
+        const formatted = res.data.map(p => ({
+          ...p,
+          _id: p._id?.toString(),
+          vendorId: p.vendorId?._id || p.vendorId || null
+        }));
+        setProducts(formatted);
+      } catch (err) {
+        console.error('Failed to load products:', err);
+        alert('Unable to fetch products.');
       }
+    };
+    fetchProducts();
+  }, []);
 
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('role', data.user.role);
-      localStorage.setItem('user', JSON.stringify(data.user));
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      if (!userId) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/recommendations/${userId}`);
+        const data = await res.json();
 
-      if (data.user.role === 'admin') navigate('/admin');
-      else if (data.user.role === 'vendor') navigate('/vendor');
-      else navigate('/customer');
-    } catch (err) {
-      console.error('Login failed:', err.response?.data || err.message);
-      alert(err.response?.data?.message || 'Login failed');
+        if (data?.message) {
+          const fallbackRes = await fetch(`${API_BASE_URL}/api/trending-products`);
+          const fallbackData = await fallbackRes.json();
+          const fallbackProducts = products.filter(p => fallbackData.includes(p._id));
+          setRecommendations(fallbackProducts);
+        } else {
+          const recommendedProducts = products.filter(p => data.includes(p._id));
+          setRecommendations(recommendedProducts);
+        }
+      } catch (error) {
+        console.error('Error fetching recommendations:', error);
+      }
+    };
+
+    if (products.length > 0) {
+      fetchRecommendations();
     }
+  }, [products, userId]);
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setCart(JSON.parse(localStorage.getItem('cart')) || []);
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  const addToCart = async (product) => {
+    const currentCart = JSON.parse(localStorage.getItem('cart')) || [];
+    if (currentCart.some(item => item._id === product._id)) {
+      alert('Product already in cart');
+      return;
+    }
+
+    const updatedCart = [...currentCart, {
+      _id: product._id,
+      title: product.title,
+      price: product.price,
+      image: product.image,
+      vendorId: product.vendorId,
+      quantity: 1
+    }];
+
+    localStorage.setItem('cart', JSON.stringify(updatedCart));
+    setCart(updatedCart);
+    window.dispatchEvent(new Event("storage"));
+
+    try {
+      await fetch(`${API_BASE_URL}/api/log-interaction`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, productId: product._id, interaction: 1 })
+      });
+    } catch (err) {
+      console.error("Failed to log interaction:", err);
+    }
+
+    alert('✅ Added to cart');
   };
 
   return (
-    <div className="container" style={{ maxWidth: '400px', margin: 'auto', paddingTop: '50px' }}>
-      <h2 style={{ color: '#0d6efd', textAlign: 'center' }}>🔐 Login</h2>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '30px' }}>
-        <input
-          type="email"
-          placeholder="Email"
-          autoComplete="off"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          autoComplete="new-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <button onClick={loginHandler}>Login</button>
+    <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '2rem', alignItems: 'flex-start', padding: '1rem 2rem' }}>
+      
+      {/* 🔍 Recommendations Sidebar */}
+      <div className="sidebar-recommendations">
+        <h3>{recommendations.length > 0 ? '🔍 Recommended for You' : '🔥 Trending Products'}</h3>
+        <p style={{ fontStyle: 'italic', color: '#888', marginTop: '-0.5rem' }}>
+          {recommendations.length > 0 ? 'Based on your interests' : 'Here are popular picks!'}
+        </p>
+
+        <div className="trending-grid">
+          {(recommendations.length === 0 && products.length > 0)
+            ? products.slice(0, 5).map(p => (
+              <div key={p._id} className="trending-item">
+                <img src={p.image || 'https://via.placeholder.com/100'} alt={p.title} />
+                <div className="trending-details">
+                  <span className="title">{p.title}</span>
+                  <span className="price">₹{p.price.toFixed(2)}</span>
+                </div>
+              </div>
+            ))
+            : recommendations.map(p => (
+              <div key={p._id} className="trending-item">
+                <img src={p.image || 'https://via.placeholder.com/100'} alt={p.title} />
+                <div className="trending-details">
+                  <span className="title">{p.title}</span>
+                  <span className="price">₹{p.price.toFixed(2)}</span>
+                </div>
+              </div>
+            ))}
+        </div>
+      </div>
+
+      {/* 🛒 Product List */}
+      <div className="container" style={{ flex: 1 }}>
+        <h2 style={{ color: '#0d6efd', marginBottom: '1rem' }}>🛒 Customer Dashboard</h2>
+        <h3>All Products</h3>
+        <div className="product-grid">
+          {products.map(p => (
+            <div key={p._id} className="product-card">
+              <img src={p.image || 'https://via.placeholder.com/200'} alt={p.title} />
+              <h4>{p.title}</h4>
+              <p style={{ color: '#28a745' }}>₹{p.price.toFixed(2)}</p>
+              <button onClick={() => addToCart(p)}>Add to Cart</button>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 };
 
-export default Login;
+export default CustomerDashboard;
