@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config'; 
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -9,13 +10,16 @@ const Login = () => {
 
   const loginHandler = async () => {
     try {
-      const { data } = await axios.post('/api/auth/login', { email, password });
+      const { data } = await axios.post(`${API_BASE_URL}/api/auth/login`, { email, password });
       console.log("✅ Logged in user:", data);
-  
+      if (!data.user || !data.token || !data.user.role) {
+            alert('Login failed: Invalid server response');
+            return;
+          }
       localStorage.setItem('token', data.token);
       localStorage.setItem('role', data.user.role);
       localStorage.setItem('user', JSON.stringify(data.user));
-  
+
       if (data.user.role === 'admin') navigate('/admin');
       else if (data.user.role === 'vendor') navigate('/vendor');
       else navigate('/customer');
