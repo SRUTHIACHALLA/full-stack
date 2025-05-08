@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config'; // ✅ import base URL
 
 const ProductUpload = () => {
   const [form, setForm] = useState({ title: '', price: '', category: '', description: '' });
@@ -7,32 +8,88 @@ const ProductUpload = () => {
 
   const upload = async () => {
     const token = localStorage.getItem('token');
-    const data = new FormData();
+    if (!token) {
+      alert("Login required to upload products.");
+      return;
+    }
 
-    for (let key in form) data.append(key, form[key]);
-    data.append('image', image);
+    if (!image || !form.title || !form.price) {
+      alert("Please fill all required fields and select an image.");
+      return;
+    }
 
-    await axios.post('/api/vendor/upload', data, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    try {
+      const data = new FormData();
+      Object.entries(form).forEach(([key, value]) => data.append(key, value));
+      data.append('image', image);
 
-    alert('Product uploaded');
+      await axios.post(`${API_BASE_URL}/api/vendor/upload`, data, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      alert('✅ Product uploaded successfully');
+      setForm({ title: '', price: '', category: '', description: '' });
+      setImage(null);
+    } catch (err) {
+      console.error('❌ Upload failed:', err.response?.data || err.message);
+      alert('Failed to upload product.');
+    }
   };
 
   return (
-    <div>
-      <h2>Upload Product</h2>
-      <input placeholder="Title" onChange={e => setForm({ ...form, title: e.target.value })} />
-      <input placeholder="Price" onChange={e => setForm({ ...form, price: e.target.value })} />
-      <input placeholder="Category" onChange={e => setForm({ ...form, category: e.target.value })} />
-      <textarea placeholder="Description" onChange={e => setForm({ ...form, description: e.target.value })} />
-      <input type="file" onChange={e => setImage(e.target.files[0])} />
-      <button onClick={upload}>Upload</button>
+    <div className="container" style={{ maxWidth: '500px', margin: 'auto', paddingTop: '40px' }}>
+      <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>🛠️ Upload Product</h2>
+      <input
+        placeholder="Title"
+        value={form.title}
+        onChange={e => setForm({ ...form, title: e.target.value })}
+        style={inputStyle}
+      />
+      <input
+        placeholder="Price"
+        type="number"
+        value={form.price}
+        onChange={e => setForm({ ...form, price: e.target.value })}
+        style={inputStyle}
+      />
+      <input
+        placeholder="Category"
+        value={form.category}
+        onChange={e => setForm({ ...form, category: e.target.value })}
+        style={inputStyle}
+      />
+      <textarea
+        placeholder="Description"
+        value={form.description}
+        onChange={e => setForm({ ...form, description: e.target.value })}
+        style={{ ...inputStyle, height: '100px' }}
+      />
+      <input type="file" onChange={e => setImage(e.target.files[0])} style={{ marginBottom: '10px' }} />
+      <button onClick={upload} style={uploadBtnStyle}>📤 Upload</button>
     </div>
   );
+};
+
+// ✅ Simple styling
+const inputStyle = {
+  width: '100%',
+  padding: '10px',
+  marginBottom: '10px',
+  border: '1px solid #ccc',
+  borderRadius: '6px'
+};
+
+const uploadBtnStyle = {
+  width: '100%',
+  padding: '12px',
+  backgroundColor: '#0d6efd',
+  color: '#fff',
+  border: 'none',
+  borderRadius: '6px',
+  cursor: 'pointer'
 };
 
 export default ProductUpload;
