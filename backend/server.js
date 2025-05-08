@@ -15,8 +15,15 @@ import orderRoutes from './routes/orders.js';
 
 dotenv.config();
 const app = express();
-app.use(cors());
-app.use(express.json());
+const allowedOrigins = [
+  'https://multivendor-frontend-t8sz.onrender.com', 
+  'http://localhost:3000'
+];
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));app.use(express.json());
 
 connectDB();
 
