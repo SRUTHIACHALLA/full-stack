@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 const VendorDashboard = () => {
   const [products, setProducts] = useState([]);
@@ -8,12 +9,14 @@ const VendorDashboard = () => {
   const token = localStorage.getItem('token');
 
   const fetchData = async () => {
+    if (!token) return alert("Unauthorized. Please login again.");
+
     try {
       const [productRes, orderRes] = await Promise.all([
-        axios.get('/api/vendor/products', {
+        axios.get(`${API_BASE_URL}/api/vendor/products`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
-        axios.get('/api/vendor/orders', {
+        axios.get(`${API_BASE_URL}/api/vendor/orders`, {
           headers: { Authorization: `Bearer ${token}` }
         })
       ]);
@@ -21,14 +24,20 @@ const VendorDashboard = () => {
       setOrders(orderRes.data);
     } catch (err) {
       console.error("❌ Failed to fetch vendor data:", err);
+      alert("Failed to load dashboard data");
     }
   };
 
   const markAsShipped = async (id) => {
-    await axios.put(`/api/vendor/order/${id}/status`, { status: 'Shipped' }, {
-  headers: { Authorization: `Bearer ${token}` }
-});
-    fetchData();
+    try {
+      await axios.put(`${API_BASE_URL}/api/vendor/order/${id}/status`, { status: 'Shipped' }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchData();
+    } catch (err) {
+      console.error("❌ Failed to update order status:", err);
+      alert("Error updating order status.");
+    }
   };
 
   useEffect(() => {
@@ -42,7 +51,15 @@ const VendorDashboard = () => {
       Delivered: '#28a745',
       Cancelled: '#dc3545'
     }[status] || '#6c757d';
-    return <span style={{ backgroundColor: color, color: '#fff', padding: '2px 8px', borderRadius: '6px' }}>{status}</span>;
+
+    return (
+      <span style={{
+        backgroundColor: color,
+        color: '#fff',
+        padding: '2px 8px',
+        borderRadius: '6px'
+      }}>{status}</span>
+    );
   };
 
   return (
@@ -77,66 +94,58 @@ const VendorDashboard = () => {
             <p>No orders received yet.</p>
           ) : (
             <div className="order-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
-  {orders.map(order => (
-    <div key={order._id} className="order-card" style={{
-      flex: '1 1 300px',
-      padding: '15px',
-      border: '1px solid #ccc',
-      borderRadius: '8px',
-      backgroundColor: '#fff',
-      minWidth: '280px'
-    }}>
-      <p><strong>Order ID:</strong> {order._id}</p>
-      <p><strong>Status:</strong> {statusBadge(order.status)}</p>
-      <p><strong>Customer:</strong> {order.customerId?.name || 'N/A'}</p>
-      <p><strong>Total:</strong> ₹{order.totalAmount.toFixed(2)}</p>
-      <p><strong>Date:</strong> {new Date(order.date).toLocaleString()}</p>
+              {orders.map(order => (
+                <div key={order._id} className="order-card" style={orderCardStyle}>
+                  <p><strong>Order ID:</strong> {order._id}</p>
+                  <p><strong>Status:</strong> {statusBadge(order.status)}</p>
+                  <p><strong>Customer:</strong> {order.customerId?.name || 'N/A'}</p>
+                  <p><strong>Total:</strong> ₹{order.totalAmount.toFixed(2)}</p>
+                  <p><strong>Date:</strong> {new Date(order.date).toLocaleString()}</p>
 
-      <div style={{ marginTop: '10px' }}>
-        {order.products.map((prod, i) => (
-          <div key={i} style={{
-            display: 'flex',
-            alignItems: 'center',
-            marginBottom: '10px',
-            background: '#f9f9f9',
-            padding: '6px',
-            borderRadius: '6px'
-          }}>
-            <img
-              src={prod.productId?.image || 'https://via.placeholder.com/50'}
-              alt={prod.productId?.title || prod.title || 'Product'}
-              style={{
-                width: '50px',
-                height: '50px',
-                objectFit: 'cover',
-                borderRadius: '6px',
-                marginRight: '10px'
-              }}
-            />
-            <span>{prod.productId?.title || prod.title || 'Product'} × {prod.quantity}</span>
-          </div>
-        ))}
-      </div>
+                  <div style={{ marginTop: '10px' }}>
+                    {order.products.map((prod, i) => (
+                      <div key={i} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        marginBottom: '10px',
+                        background: '#f9f9f9',
+                        padding: '6px',
+                        borderRadius: '6px'
+                      }}>
+                        <img
+                          src={prod.productId?.image || 'https://via.placeholder.com/50'}
+                          alt={prod.productId?.title || prod.title || 'Product'}
+                          style={{
+                            width: '50px',
+                            height: '50px',
+                            objectFit: 'cover',
+                            borderRadius: '6px',
+                            marginRight: '10px'
+                          }}
+                        />
+                        <span>{prod.productId?.title || prod.title || 'Product'} × {prod.quantity}</span>
+                      </div>
+                    ))}
+                  </div>
 
-      {order.status === 'Placed' && (
-        <button
-          onClick={() => markAsShipped(order._id)}
-          style={{
-            marginTop: '10px',
-            padding: '6px 12px',
-            backgroundColor: '#007bff',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '4px'
-          }}
-        >
-          📦 Mark as Shipped
-        </button>
-      )}
-    </div>
-  ))}
-</div>
-
+                  {order.status === 'Placed' && (
+                    <button
+                      onClick={() => markAsShipped(order._id)}
+                      style={{
+                        marginTop: '10px',
+                        padding: '6px 12px',
+                        backgroundColor: '#007bff',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '4px'
+                      }}
+                    >
+                      📦 Mark as Shipped
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -183,11 +192,12 @@ const imgStyle = {
 };
 
 const orderCardStyle = {
-  marginBottom: '20px',
+  flex: '1 1 300px',
   padding: '15px',
   border: '1px solid #ccc',
   borderRadius: '8px',
-  backgroundColor: '#fff'
+  backgroundColor: '#fff',
+  minWidth: '280px'
 };
 
 export default VendorDashboard;
