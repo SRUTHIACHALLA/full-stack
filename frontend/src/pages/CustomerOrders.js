@@ -1,19 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config'; // ✅ import the base URL
 
 const CustomerOrders = () => {
   const [orders, setOrders] = useState([]);
   const token = localStorage.getItem('token');
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/orders/customer', {
+    axios.get(`${API_BASE_URL}/api/orders/customer`, {
       headers: { Authorization: `Bearer ${token}` }
     })
-    .then(res => {
-      console.log("✅ Fetched Orders:", res.data);
-      setOrders(res.data);
-    })
-    .catch(err => console.error('❌ Error fetching orders:', err));
+      .then(res => {
+        console.log("✅ Fetched Orders:", res.data);
+        setOrders(res.data);
+      })
+      .catch(err => {
+        console.error('❌ Error fetching orders:', err);
+        alert('Failed to fetch your orders. Please try again.');
+      });
   }, []);
 
   return (
