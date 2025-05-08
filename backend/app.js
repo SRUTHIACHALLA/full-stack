@@ -17,7 +17,10 @@ connectDB(); // ✅ connect DB only once
 
 const app = express();
 
-app.use(cors());
+app.use(cors(({
+  origin: '*', // Or restrict to your frontend Render domain
+  credentials: true
+}));
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
