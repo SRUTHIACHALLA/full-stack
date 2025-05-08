@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config'; 
 
 const Signup = () => {
   const [form, setForm] = useState({ name: '', email: '', password: '', location: '', role: 'customer' });
   const navigate = useNavigate();
 
   const signupHandler = async () => {
-    await axios.post('/api/auth/signup', form);
+    await axios.post(`${API_BASE_URL}/api/auth/signup`, form);
     navigate('/login');
   };
 
