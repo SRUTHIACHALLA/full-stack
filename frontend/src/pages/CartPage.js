@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { API_BASE_URL } from '../config'; // ✅ import the base URL
 
 const CartPage = () => {
   const [cart, setCart] = useState(() => JSON.parse(localStorage.getItem('cart')) || []);
@@ -50,11 +51,11 @@ const CartPage = () => {
       }
 
       const products = cart.map(item => ({
-        productId: item._id, // Keep as string if product._id is string
+        productId: item._id,
         quantity: item.quantity
       }));
 
-      const { data } = await axios.post('/api/payment/create-order', { amount: total });
+      const { data } = await axios.post(`${API_BASE_URL}/api/payment/create-order`, { amount: total });
 
       const options = {
         key: 'rzp_test_4xpcHp4k9l7JPj',
@@ -66,10 +67,9 @@ const CartPage = () => {
         handler: async function (response) {
           alert("✅ Payment Successful!");
 
-          // 🔽 POST to backend order creation route
           try {
             await axios.post(
-              '/api/orders/create',
+              `${API_BASE_URL}/api/orders/create`,
               {
                 vendorId,
                 products,
